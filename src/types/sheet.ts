@@ -1,15 +1,17 @@
-export interface SheetRow {
-  timestamp: string;   // ISO 8601
-  suhuIkan: number;    // dari "suhu ikan" (mengubah koma -> titik)
-  warnaIkan: string;   // dari "warna ikan" (mis. CERAH | NETRAL | PUCAT)
-  statusGas: string;   // dari "status gas" (mis. AMAN | TIDAK)
-  nilaiGas: number;    // dari "nilai gas" (angka)
-}
+export type SheetRow = {
+  timestamp: string;
+  suhu_ikan: number;
+  warna_ikan: string;
+  status_gas: string;
+  nilai_gas: number;
+  avg_rgb?: number;
+};
 
-export interface ChartPoint {
-  time: string;        // label waktu lokal (HH:MM)
+// titik data untuk grafik pada halaman Monitoring
+export type ChartPoint = {
   timestamp: number;   // epoch ms
-  suhuIkan: number;
-  nilaiGas: number;
-  warnaIndex: number;  // 0=PUCAT, 1=NETRAL, 2=CERAH
-}
+  time: string;        // "HH:MM"
+  suhuIkan: number;    // dari sheet.suhu_ikan
+  nilaiGas: number;    // dari sheet.nilai_gas
+  warnaIndex: number;  // 0..2 dari sheet.warna_ikan
+};

@@ -1,10 +1,11 @@
+// src/components/Navbar.tsx
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Fish, Gauge,Home, Phone, Menu, X, HomeIcon } from 'lucide-react';
+import { Home, Gauge, Images, Phone, Menu, X } from 'lucide-react';
 import { GiFishSmoking } from 'react-icons/gi';
 
-// Keep this union in sync with App.tsx
-export type Page = 'home' | 'monitoring' | 'contact';
+// Harus sama dengan di App.tsx
+export type Page = 'home' | 'monitoring' | 'gallery' | 'contact';
 
 export type NavbarProps = {
   currentPage: Page;
@@ -12,9 +13,10 @@ export type NavbarProps = {
 };
 
 const tabs: Array<{ key: Page; label: string; icon: React.ElementType }> = [
-  { key: 'home', label: 'Home', icon: HomeIcon },
-  { key: 'monitoring', label: 'Monitoring', icon: Gauge },
-  { key: 'contact', label: 'Contact', icon: Phone },
+  { key: 'home',        label: 'Home',        icon: Home },
+  { key: 'monitoring',  label: 'Monitoring',  icon: Gauge },
+  { key: 'gallery',     label: 'Galeri',      icon: Images },
+  { key: 'contact',     label: 'Contact',     icon: Phone },
 ];
 
 const Navbar: React.FC<NavbarProps> = ({ currentPage, setCurrentPage }) => {
@@ -22,14 +24,13 @@ const Navbar: React.FC<NavbarProps> = ({ currentPage, setCurrentPage }) => {
 
   const handleGo = (page: Page) => {
     setCurrentPage(page);
-    setOpen(false); // close mobile menu after navigate
-    // Scroll to top for nicer transition on phones
+    setOpen(false); // tutup menu mobile
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
     <header className="sticky top-0 z-50">
-      {/* Top bar with blur + subtle border */}
+      {/* Top bar */}
       <div className="backdrop-blur supports-[backdrop-filter]:bg-white/70 bg-white/80 border-b border-white/40 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
@@ -65,7 +66,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentPage, setCurrentPage }) => {
                     ].join(' ')}
                     aria-current={active ? 'page' : undefined}
                   >
-                    {/* Active background highlight */}
+                    {/* Active pill */}
                     {active && (
                       <motion.span
                         layoutId="nav-pill"

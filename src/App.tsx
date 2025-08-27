@@ -4,10 +4,10 @@ import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import Monitoring from './pages/Monitoring';
 import Contact from './pages/Contact';
+import Gallery from './pages/Gallery'; // <-- tambah import
 import Footer from './components/Footer';
 
-
-type Page = 'home' | 'monitoring' | 'contact';
+type Page = 'home' | 'monitoring' | 'gallery' | 'contact'; // <-- tambah 'gallery'
 
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>('home');
@@ -22,6 +22,8 @@ function App() {
         return <Home onStartMonitoring={handleStartMonitoring} />;
       case 'monitoring':
         return <Monitoring />;
+      case 'gallery': // <-- case baru
+        return <Gallery />;
       case 'contact':
         return <Contact />;
       default:
@@ -31,6 +33,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50 to-blue-100">
+      {/* pastikan Navbar menerima props currentPage & setCurrentPage */}
       <Navbar currentPage={currentPage} setCurrentPage={setCurrentPage} />
 
       <AnimatePresence mode="wait">

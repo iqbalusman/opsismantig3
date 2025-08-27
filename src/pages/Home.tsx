@@ -1,6 +1,10 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Waves, Thermometer, Wind, ArrowRight } from 'lucide-react';
+import {
+  Waves, Thermometer, Wind, ArrowRight,
+  Cpu, CircuitBoard, Wifi, Cloud, Shield, Activity,
+  Gauge, Clock, Database, Zap, Radio, Camera, BarChart3
+} from 'lucide-react';
 import { GiFishSmoking } from 'react-icons/gi';
 
 type HomeProps = {
@@ -10,10 +14,7 @@ type HomeProps = {
 const Home: React.FC<HomeProps> = ({ onStartMonitoring }) => {
   const containerVariants = {
     hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { delayChildren: 0.3, staggerChildren: 0.2 }
-    }
+    visible: { opacity: 1, transition: { delayChildren: 0.3, staggerChildren: 0.2 } }
   };
 
   const itemVariants = {
@@ -42,6 +43,45 @@ const Home: React.FC<HomeProps> = ({ onStartMonitoring }) => {
     }
   ];
 
+  const iotStack = [
+    {
+      icon: Cpu,
+      title: 'Edge Node',
+      desc: 'Mikrokontroler (ESP32) dengan sensor mics3200, dallas, sensor color .'
+    },
+    {
+      icon: Radio,
+      title: 'Protokol',
+      desc: 'Kirim data via Wi-Fi menggunakan HTTP/MQTT sesuai kebutuhan instalasi.'
+    },
+    {
+      icon: Cloud,
+      title: 'Gateway & Cloud',
+      desc: 'GAS Web App + Google Sheets sebagai endpoint sederhana, murah, dan andal.'
+    },
+    {
+      icon: Database,
+      title: 'Pipeline Data',
+      desc: 'Normalisasi kolom (timestamp, suhu, warna, status gas, nilai gas, avg rgb).'
+    },
+    {
+      icon: Shield,
+      title: 'Keamanan',
+      desc: 'Dukungan token sederhana di endpoint + CORS & cache-buster untuk integritas data.'
+    }
+  ];
+
+  const advantages = [
+    { icon: Activity, title: 'Realtime & Ringan', desc: 'Hook polling (VITE_SHEET_POLL_MS) menyegarkan data tanpa beban berat.' },
+    { icon: Camera, title: 'Avg RGB', desc: 'Grafik nilai avg_rgb untuk mewakili kecerahan/warna ikan.' },
+    { icon: Gauge, title: 'Status dari Sheet', desc: 'Penentuan “Segar/Tidak” berbasis label warna_ikan & status_gas dari spreadsheet.' },
+    { icon: Clock, title: 'Time-zone Lokal', desc: 'Timestamp diformat sesuai zona waktu (Asia/Gorontalo).' },
+    { icon: Database, title: 'Ekspor CSV', desc: 'Sekali klik unduh seluruh data dalam format CSV.' },
+    { icon: Zap, title: 'Responsif & Mulus', desc: 'UI mobile-first dengan animasi halus, skeleton saat loading.' },
+    { icon: CircuitBoard, title: 'Mudah Integrasi', desc: 'Skema kolom sederhana, cocok untuk berbagai sensor & firmware.' },
+    { icon: Wifi, title: 'Stabil di Lapangan', desc: 'Cache-buster & no-store mencegah data basi pada jaringan fluktuatif.' },
+  ];
+
   return (
     <motion.div variants={containerVariants} initial="hidden" animate="visible" className="pt-20 pb-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -57,7 +97,6 @@ const Home: React.FC<HomeProps> = ({ onStartMonitoring }) => {
             </motion.div>
 
             <motion.h1 variants={itemVariants} className="text-5xl md:text-6xl font-bold mb-6 text-center">
-              {/* Kunci jarak: block + mb-3 + text-transparent agar gradient tampil */}
               <span className="block bg-gradient-to-r from-blue-600 via-cyan-600 to-blue-800 bg-clip-text text-blue-500 mb-5">
                 Sistem Monitoring
               </span>
@@ -74,22 +113,13 @@ const Home: React.FC<HomeProps> = ({ onStartMonitoring }) => {
           </motion.p>
 
           <motion.div variants={itemVariants} className="flex flex-wrap justify-center gap-4 mb-12">
-            <motion.div
-              whileHover={{ scale: 1.05, rotate: 5 }}
-              className="bg-white/60 backdrop-blur-sm px-6 py-3 rounded-full border border-blue-200 shadow-lg"
-            >
+            <motion.div whileHover={{ scale: 1.05, rotate: 5 }} className="bg-white/60 backdrop-blur-sm px-6 py-3 rounded-full border border-blue-200 shadow-lg">
               <span className="text-blue-600 font-semibold">🐟 Kesegaran Terjamin</span>
             </motion.div>
-            <motion.div
-              whileHover={{ scale: 1.05, rotate: -5 }}
-              className="bg-white/60 backdrop-blur-sm px-6 py-3 rounded-full border border-cyan-200 shadow-lg"
-            >
+            <motion.div whileHover={{ scale: 1.05, rotate: -5 }} className="bg-white/60 backdrop-blur-sm px-6 py-3 rounded-full border border-cyan-200 shadow-lg">
               <span className="text-cyan-600 font-semibold">📊 Monitoring Fisik</span>
             </motion.div>
-            <motion.div
-              whileHover={{ scale: 1.05, rotate: 5 }}
-              className="bg-white/60 backdrop-blur-sm px-6 py-3 rounded-full border border-orange-200 shadow-lg"
-            >
+            <motion.div whileHover={{ scale: 1.05, rotate: 5 }} className="bg-white/60 backdrop-blur-sm px-6 py-3 rounded-full border border-orange-200 shadow-lg">
               <span className="text-orange-600 font-semibold">⚡ Analisis Otomatis</span>
             </motion.div>
           </motion.div>
@@ -115,6 +145,74 @@ const Home: React.FC<HomeProps> = ({ onStartMonitoring }) => {
           })}
         </motion.div>
 
+       {/* NEW: Teknologi IoT Terdepan (teks kiri, foto kanan) */}
+<motion.section variants={itemVariants} className="mb-16">
+  <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+    {/* Kolom Teks */}
+    <div>
+      <h2 className="text-3xl font-bold text-gray-900 mb-3">Teknologi IoT Terdepan</h2>
+      <p className="text-gray-600 mb-6">
+        Arsitektur ringan dan andal dari edge hingga dashboard untuk memastikan data sensor
+        stabil, real-time, dan mudah diintegrasikan.
+      </p>
+
+      <ul className="space-y-5">
+        {iotStack.map((s, i) => {
+          const Icon = s.icon as any;
+          return (
+            <li key={i} className="flex gap-3">
+              <div className="mt-1 flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50">
+                <Icon className="w-4 h-4 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-800">{s.title}</h3>
+                <p className="text-gray-600 text-sm leading-relaxed">{s.desc}</p>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+
+    {/* Kolom Foto */}
+    <div className="relative">
+      {/* dekorasi blur halus di belakang gambar */}
+      <div className="absolute -inset-4 -z-10 rounded-[2rem] bg-gradient-to-br from-blue-100 to-cyan-100 blur-2xl opacity-70" />
+      <img
+        src="https://sdmntprwestus.oaiusercontent.com/files/00000000-2f3c-6230-bc42-bf22347b9d60/raw?se=2025-08-28T00%3A22%3A58Z&sp=r&sv=2024-08-04&sr=b&scid=76163110-411b-5bed-b116-8191344dbe10&skoid=03727f49-62d3-42ac-8350-1c0e6559d238&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-08-27T23%3A16%3A53Z&ske=2025-08-28T23%3A16%3A53Z&sks=b&skv=2024-08-04&sig=9to6ePZxCYvKQgUYaR693wo6kMR2Ty1TmPhogUBz%2B/A%3D"               // ganti sesuai nama file kamu di /public
+        alt="Ilustrasi arsitektur IoT: sensor → gateway → cloud → dashboard"
+        className="w-full rounded-2xl shadow-2xl border object-cover"
+      />
+    </div>
+  </div>
+</motion.section>
+
+
+        {/* NEW: Fitur Keunggulan */}
+        <motion.div variants={itemVariants} className="mb-16">
+          <h2 className="text-3xl font-bold text-gray-900 mb-6">Fitur Keunggulan</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {advantages.map((a, i) => {
+              const Icon = a.icon as any;
+              return (
+                <motion.div
+                  key={i}
+                  whileHover={{ y: -6 }}
+                  className="p-5 rounded-2xl border bg-white/70 backdrop-blur-sm shadow-md hover:shadow-lg transition"
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+                      <Icon className="w-5 h-5 text-white" />
+                    </div>
+                    <h3 className="text-base font-semibold text-gray-800">{a.title}</h3>
+                  </div>
+                  <p className="text-gray-600 text-sm leading-relaxed">{a.desc}</p>
+                </motion.div>
+              );
+            })}
+          </div>
+        </motion.div>
+
         {/* CTA Section */}
         <motion.div variants={itemVariants} className="text-center bg-gradient-to-r from-blue-500 to-cyan-500 rounded-3xl p-12 text-white shadow-2xl">
           <Waves className="w-16 h-16 mx-auto mb-6 opacity-80" />
@@ -123,8 +221,6 @@ const Home: React.FC<HomeProps> = ({ onStartMonitoring }) => {
             Pantau kondisi fisik ikan Fufu Anda secara real-time dan dapatkan analisis mendalam
             tentang kesegaran dan kualitas ikan.
           </p>
-
-          {/* Klik tombol ini untuk pindah ke halaman Monitoring */}
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
