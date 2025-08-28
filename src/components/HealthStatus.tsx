@@ -60,7 +60,7 @@ const HealthStatus: React.FC<Props> = ({
     if (healthScore >= 90) return `${fishName} dalam kondisi sangat baik dan layak konsumsi.`;
     if (healthScore >= 80) return `${fishName} dalam kondisi baik dan layak konsumsi.`;
     if (healthScore >= 60) return `Kondisi ${fishName} memerlukan perhatian, perlu pemantauan lebih ketat.`;
-    return `${fishName} tidak layak konsumsi, perlu tindakan segera untuk memperbaiki kondisi air.`;
+    return `${fishName} tidak layak konsumsi, karena sudah menunjukan tanda-tanda warna dan bau yang sudah tidak bagus.`;
   };
 
   const getProgressColor = () => {
