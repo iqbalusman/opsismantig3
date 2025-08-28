@@ -1,11 +1,11 @@
-// src/pages/Monitoring.tsx
+// src/pages/Monitoring.tsx (no blur + enhanced header)
 import React from "react";
 import { useGoogleSheet } from "../hooks/useGoogleSheet";
 import SensorCard from "../components/SensorCard";
 import SensorChart from "../components/SensorChart";
 import HealthStatus from "../components/HealthStatus";
 import { formatLocal } from "../lib/fetchSpreadsheetData";
-import { Download, RefreshCcw } from "lucide-react";
+import { Download, RefreshCcw, HeartPulse, Activity, BarChart2, Info } from "lucide-react";
 
 const Monitoring: React.FC = () => {
   const { data, isInitialLoading, isRefreshing, error, refresh } = useGoogleSheet();
@@ -14,10 +14,7 @@ const Monitoring: React.FC = () => {
   const latest = React.useMemo(() => (data.length ? data[data.length - 1] : undefined), [data]);
 
   // info waktu update terakhir (lokal)
-  const lastUpdated = React.useMemo(
-    () => (latest ? formatLocal(latest.timestamp) : null),
-    [latest]
-  );
+  const lastUpdated = React.useMemo(() => (latest ? formatLocal(latest.timestamp) : null), [latest]);
 
   // ===== Download CSV (semua data yang ada di memori) =====
   const handleDownloadCSV = React.useCallback(() => {
@@ -53,92 +50,138 @@ const Monitoring: React.FC = () => {
 
   // state bantuan
   const firstLoading = isInitialLoading && !latest; // load pertama
-  const overlay = firstLoading || isRefreshing;     // tampilkan overlay tipis di section
+  const overlay = firstLoading || isRefreshing; // overlay tipis di section
 
   return (
-    <div className="pt-8 pb-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-        {/* Header + actions */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
-              Monitoring
-            </h1>
-            <div className="mt-1 text-sm text-gray-500">
-              {lastUpdated ? `Terakhir diperbarui: ${lastUpdated}` : "Memuat data…"}
-              {isRefreshing && <span className="ml-2 animate-pulse">menyegarkan…</span>}
-            </div>
-          </div>
+    <div className="relative min-h-[100dvh]">
+      {/* ===== Page background: crisp blue → sky (NO blur) ===== */}
+      <div
+        aria-hidden
+        className="absolute inset-0 -z-10"
+        style={{
+          background:
+            "linear-gradient(135deg, #E0F2FE 0%, #CFEAFE 22%, #B6E2FD 48%, #93CDFB 74%, #67B6F6 100%)",
+        }}
+      />
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={refresh}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
-              title="Refresh data"
-              disabled={isRefreshing}
-            >
-              <RefreshCcw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
-              {isRefreshing ? "Menyegarkan…" : "Refresh"}
-            </button>
-            <button
-              onClick={handleDownloadCSV}
-              disabled={!data || data.length === 0}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 disabled:opacity-50"
-              title="Download CSV"
-            >
-              <Download className="w-4 h-4" />
-              Download CSV
-            </button>
+      {/* ===== Header ===== */}
+      <header className="pt-10 pb-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="relative rounded-3xl border border-sky-100 bg-white shadow-sm p-6">
+            {/* top meta */}
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h1 className="text-4xl font-extrabold leading-tight tracking-tight text-slate-900">
+                  <span className="bg-gradient-to-r from-blue-700 via-blue-600 to-sky-500 bg-clip-text text-transparent">Monitoring</span>
+                </h1>
+                <p className="mt-1 text-sm text-slate-600 flex items-center gap-1.5">
+                  <Info className="w-4 h-4 text-sky-600" />
+                  {lastUpdated ? (
+                    <>
+                      Terakhir diperbarui: <span className="font-semibold text-slate-900">{lastUpdated}</span>
+                      {isRefreshing && <span className="ml-2 animate-pulse">• menyegarkan…</span>}
+                    </>
+                  ) : (
+                    "Memuat data…"
+                  )}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={refresh}
+                  className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-sky-600 text-white shadow hover:shadow-md active:scale-[0.99] transition disabled:opacity-60"
+                  title="Refresh data"
+                  disabled={isRefreshing}
+                >
+                  <RefreshCcw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
+                  {isRefreshing ? "Menyegarkan…" : "Refresh"}
+                </button>
+                <button
+                  onClick={handleDownloadCSV}
+                  disabled={!data || data.length === 0}
+                  className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-sky-200 bg-white text-sky-800 hover:bg-sky-50 shadow-sm disabled:opacity-50"
+                  title="Download CSV"
+                >
+                  <Download className="w-4 h-4" />
+                  Download CSV
+                </button>
+              </div>
+            </div>
+
+            {/* decorative bottom gradient bar */}
+            <div className="mt-5 h-1.5 w-full rounded-full bg-gradient-to-r from-blue-500 via-sky-400 to-cyan-400" />
           </div>
         </div>
+      </header>
 
-        {/* Error banner */}
-        {!isInitialLoading && error && (
-          <div className="p-3 rounded-lg bg-red-50 text-red-700 border border-red-200">
-            Terjadi kesalahan saat memuat data.
-          </div>
-        )}
+      {/* ===== Content ===== */}
+      <main className="pb-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+          {/* Error banner */}
+          {!isInitialLoading && error && (
+            <div className="p-3 rounded-xl bg-red-50 text-red-700 border border-red-200">Terjadi kesalahan saat memuat data.</div>
+          )}
 
-        {/* Section: Status Kesehatan (pakai STATUS dari sheet) */}
-        <section className="space-y-4 relative">
-          {overlay && (
-            <div className="absolute inset-0 rounded-2xl bg-gray-100/50 animate-pulse pointer-events-none" />
-          )}
-          <h2 className="text-lg font-semibold text-gray-800">Status Kesehatan</h2>
-          {latest ? (
-            <HealthStatus
-              suhu_ikan={latest.suhu_ikan}      // info (tidak menentukan status)
-              nilai_gas={latest.nilai_gas}      // info (tidak menentukan status)
-              warna_ikan={latest.warna_ikan}    // status dari sheet
-              status_gas={latest.status_gas}    // status dari sheet
-            />
-          ) : (
-            <div className="p-4 rounded-lg border bg-white text-gray-600">Belum ada data.</div>
-          )}
-        </section>
+          {/* Section: Status Kesehatan */}
+          <section className="space-y-3 relative">
+            {overlay && <div className="absolute inset-0 rounded-2xl bg-white/55 ring-1 ring-sky-100 animate-pulse pointer-events-none" />}
+            <div className="flex items-center gap-2">
+              <div className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-white border border-sky-100 shadow-sm">
+                <HeartPulse className="w-4 h-4 text-sky-700" />
+              </div>
+              <h2 className="text-lg font-semibold text-slate-900">Status Kesehatan</h2>
+            </div>
 
-        {/* Section: Ringkasan Nilai (cards) */}
-        <section className="space-y-4 relative">
-          {overlay && (
-            <div className="absolute inset-0 rounded-2xl bg-gray-100/50 animate-pulse pointer-events-none" />
-          )}
-          <h2 className="text-lg font-semibold text-gray-800">Ringkasan Nilai Saat Ini</h2>
-          {latest ? (
-            <SensorCard row={latest} />
-          ) : (
-            <div className="p-4 rounded-lg border bg-white text-gray-600">Belum ada data.</div>
-          )}
-        </section>
+            <div className="rounded-3xl border border-sky-100 bg-white shadow-sm p-4">
+              {latest ? (
+                <HealthStatus
+                  suhu_ikan={latest.suhu_ikan}
+                  nilai_gas={latest.nilai_gas}
+                  warna_ikan={latest.warna_ikan}
+                  status_gas={latest.status_gas}
+                />
+              ) : (
+                <div className="p-4 rounded-2xl border bg-white text-gray-600">Belum ada data.</div>
+              )}
+            </div>
+          </section>
 
-        {/* Section: Grafik */}
-        <section className="space-y-4 relative">
-          {overlay && (
-            <div className="absolute inset-0 rounded-2xl bg-gray-100/50 animate-pulse pointer-events-none" />
-          )}
-          <h2 className="text-lg font-semibold text-gray-800">Grafik</h2>
-          <SensorChart data={data} />
-        </section>
-      </div>
+          {/* Section: Ringkasan Nilai (cards) */}
+          <section className="space-y-3 relative">
+            {overlay && <div className="absolute inset-0 rounded-2xl bg-white/55 ring-1 ring-sky-100 animate-pulse pointer-events-none" />}
+            <div className="flex items-center gap-2">
+              <div className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-white border border-sky-100 shadow-sm">
+                <Activity className="w-4 h-4 text-blue-700" />
+              </div>
+              <h2 className="text-lg font-semibold text-slate-900">Ringkasan Nilai Saat Ini</h2>
+            </div>
+
+            <div className="rounded-3xl border border-sky-100 bg-white shadow-sm p-4">
+              {latest ? (
+                <SensorCard row={latest} />
+              ) : (
+                <div className="p-4 rounded-2xl border bg-white text-gray-600">Belum ada data.</div>
+              )}
+            </div>
+          </section>
+
+          {/* Section: Grafik */}
+          <section className="space-y-3 relative">
+            {overlay && <div className="absolute inset-0 rounded-2xl bg-white/55 ring-1 ring-sky-100 animate-pulse pointer-events-none" />}
+            <div className="flex items-center gap-2">
+              <div className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-white border border-sky-100 shadow-sm">
+                <BarChart2 className="w-4 h-4 text-sky-700" />
+              </div>
+              <h2 className="text-lg font-semibold text-slate-900">Grafik</h2>
+            </div>
+
+            <div className="rounded-3xl border border-sky-100 bg-white shadow-sm p-4">
+              <SensorChart data={data} />
+            </div>
+          </section>
+        </div>
+      </main>
     </div>
   );
 };
