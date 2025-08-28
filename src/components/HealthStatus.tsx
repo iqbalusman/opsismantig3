@@ -1,3 +1,4 @@
+// src/components/HealthStatus.tsx
 import React, { useMemo } from "react";
 import { motion } from "framer-motion";
 import {
@@ -10,108 +11,70 @@ import {
   Info,
 } from "lucide-react";
 
-/**
- * HealthStatusFufu – Traffic Light Theme (Green/Orange/Red)
- * Latar: gradien penuh biru muda → biru langit (full coverage).
- */
-
 type Status = "good" | "warning" | "danger";
 
 type Props = {
-  suhu_ikan: number; // °C
-  nilai_gas: number; // proxy TVB-N/VOC
-  avg_rgb: number; // 0–255 (rerata brightness)
-  warna_ikan: string; // label visual
-  status_gas: string; // label bau/gas
+  suhu_ikan?: number | null;
+  nilai_gas?: number | null;
+  avg_rgb?: number | null;
+  warna_ikan?: string | null;
+  status_gas?: string | null;
   fishName?: string;
   animate?: boolean;
 };
 
-/* ====== Helper konversi label → status (khusus fufu) ====== */
-function statusFromWarnaLabel(s: string): Status {
-  const up = (s ?? "").trim().toUpperCase();
+/* ===== Helpers ===== */
+const safeUpper = (s?: string | null) => (s ?? "").trim().toUpperCase();
+
+function statusFromWarnaLabel(s?: string | null): Status {
+  const up = safeUpper(s);
   if (!up) return "warning";
-  if (
-    up.includes("PUCAT") ||
-    up.includes("ABU") ||
-    up.includes("LENDIR") ||
-    up.includes("HIJAU") ||
-    up.includes("HITAM")
-  )
-    return "danger";
-  if (
-    up.includes("CERAH") ||
-    up.includes("COCOKLAT") ||
-    up.includes("COKELAT") ||
-    up.includes("MERATA")
-  )
-    return "good";
+  if (up.includes("PUCAT") || up.includes("ABU") || up.includes("LENDIR") || up.includes("HIJAU") || up.includes("HITAM")) return "danger";
+  if (up.includes("CERAH") || up.includes("COKLAT") || up.includes("COCOKLAT") || up.includes("MERATA")) return "good";
   if (up.includes("NETRAL") || up.includes("OK")) return "warning";
   return "warning";
 }
-function statusFromGasLabel(s: string): Status {
-  const up = (s ?? "").trim().toUpperCase();
+function statusFromGasLabel(s?: string | null): Status {
+  const up = safeUpper(s);
   if (!up) return "warning";
-  if (
-    up.includes("ASAM") ||
-    up.includes("MENYENGAT") ||
-    up.includes("ANYIR KUAT") ||
-    up.includes("BUSUK")
-  )
-    return "danger";
-  if (
-    up.includes("AMAN") ||
-    up.includes("SEGAR") ||
-    up.includes("NETRAL") ||
-    up.includes("RINGAN")
-  )
-    return "good";
+  if (up.includes("ASAM") || up.includes("MENYENGAT") || up.includes("ANYIR KUAT") || up.includes("BUSUK")) return "danger";
+  if (up.includes("AMAN") || up.includes("SEGAR") || up.includes("NETRAL") || up.includes("RINGAN")) return "good";
   return "warning";
 }
-
-/* ====== Helper konversi nilai → status ====== */
-function statusFromSuhu(v?: number): Status {
+function statusFromSuhu(v?: number | null): Status {
   if (!Number.isFinite(v as number)) return "warning";
-  if ((v as number) <= 4) return "good"; // ideal cold chain
-  if ((v as number) <= 10) return "warning"; // hati-hati
-  return "danger"; // >10°C berisiko
-}
-function statusFromGasValue(v?: number): Status {
-  if (!Number.isFinite(v as number)) return "warning";
-  if ((v as number) <= 10) return "good";
-  if ((v as number) <= 20) return "warning";
-  return "danger"; // >20 indikasi degradasi kuat
-}
-function statusFromAvgRGB(v?: number): Status {
-  if (!Number.isFinite(v as number)) return "warning";
-  if ((v as number) >= 80 && (v as number) <= 170) return "good";
-  if ((v as number) >= 60 && (v as number) <= 190) return "warning";
+  const x = v as number;
+  if (x <= 4) return "good";
+  if (x <= 10) return "warning";
   return "danger";
 }
-
+function statusFromGasValue(v?: number | null): Status {
+  if (!Number.isFinite(v as number)) return "warning";
+  const x = v as number;
+  if (x <= 10) return "good";
+  if (x <= 20) return "warning";
+  return "danger";
+}
+function statusFromAvgRGB(v?: number | null): Status {
+  if (!Number.isFinite(v as number)) return "warning";
+  const x = v as number;
+  if (x >= 80 && x <= 170) return "good";
+  if (x >= 60 && x <= 190) return "warning";
+  return "danger";
+}
 function scoreOfStatus(st: Status) {
   return st === "good" ? 100 : st === "warning" ? 75 : 40;
 }
 
-// Bobot komposit
-const W = {
-  warnaLabel: 0.35,
-  gasLabel: 0.25,
-  suhu: 0.2,
-  gasValue: 0.1,
-  avgRgb: 0.1,
-} as const;
+const W = { warnaLabel: 0.35, gasLabel: 0.25, suhu: 0.2, gasValue: 0.1, avgRgb: 0.1 } as const;
 
-// ====== Tone helpers (untuk UI) ======
-function toTone(st: Status): "ok" | "warn" | "danger" | "idle" {
+/* ===== Tone/UI helpers ===== */
+function toTone(st: Status): "ok" | "warn" | "danger" {
   if (st === "good") return "ok";
   if (st === "warning") return "warn";
-  if (st === "danger") return "danger";
-  return "idle";
+  return "danger";
 }
-
-function getToneStyles(tone: "ok" | "warn" | "danger" | "idle") {
-  // Skema: hijau/oranye/merah
+function getToneStyles(tone: "ok" | "warn" | "danger") {
   switch (tone) {
     case "ok":
       return {
@@ -133,7 +96,7 @@ function getToneStyles(tone: "ok" | "warn" | "danger" | "idle") {
         dot: "bg-orange-500",
         glow: "bg-orange-300/30",
       };
-    case "danger":
+    default:
       return {
         border: "border-red-300/60",
         iconWrap: "bg-red-50/80 border-red-200 ring-red-200/40",
@@ -143,71 +106,37 @@ function getToneStyles(tone: "ok" | "warn" | "danger" | "idle") {
         dot: "bg-red-600",
         glow: "bg-red-300/30",
       };
-    default:
-      return {
-        border: "border-slate-200/70",
-        iconWrap: "bg-slate-50/80 border-slate-200 ring-slate-200/40",
-        icon: "text-slate-500",
-        accentBar: "bg-gradient-to-r from-slate-200 to-slate-300",
-        badge: "bg-slate-50 border-slate-200 text-slate-600",
-        dot: "bg-slate-400",
-        glow: "bg-slate-300/30",
-      };
   }
 }
-
-function StatusBadge({ tone }: { tone: "ok" | "warn" | "danger" | "idle" }) {
+function StatusBadge({ tone }: { tone: "ok" | "warn" | "danger" }) {
   const toneStyles = getToneStyles(tone);
-  const text = tone === "ok" ? "Normal" : tone === "warn" ? "Waspada" : tone === "danger" ? "Bahaya" : "Idle";
+  const text = tone === "ok" ? "Normal" : tone === "warn" ? "Waspada" : "Bahaya";
   return (
-    <span
-      className={[
-        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium",
-        toneStyles.badge,
-      ].join(" ")}
-    >
+    <span className={["inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium", toneStyles.badge].join(" ")}>
       <span className={["h-1.5 w-1.5 rounded-full", toneStyles.dot].join(" ")} />
       {text}
     </span>
   );
 }
-
-function LegendDot({ tone }: { tone: "ok" | "warn" | "danger" | "idle" }) {
+function LegendDot({ tone }: { tone: "ok" | "warn" | "danger" }) {
   const toneStyles = getToneStyles(tone);
   return <span className={["h-2 w-2 rounded-full inline-block", toneStyles.dot].join(" ")} />;
 }
-
 function Card({
-  tone = "idle",
-  title,
-  label,
-  Icon,
-  hint,
+  tone, title, label, Icon, hint,
 }: {
-  tone: "ok" | "warn" | "danger" | "idle";
+  tone: "ok" | "warn" | "danger";
   title: string;
   label: string;
-  Icon: any;
+  Icon: React.ComponentType<{ className?: string }>;
   hint?: string;
 }) {
   const toneStyles = getToneStyles(tone);
   return (
-    <div
-      className={[
-        "group relative overflow-hidden rounded-2xl border bg-white p-4 shadow-sm",
-        "transition-colors duration-300",
-        toneStyles.border,
-      ].join(" ")}
-    >
+    <div className={["group relative overflow-hidden rounded-2xl border bg-white p-4 shadow-sm", "transition-colors duration-300", toneStyles.border].join(" ")}>
       <div aria-hidden className={["absolute inset-x-0 top-0 h-1", toneStyles.accentBar].join(" ")} />
       <div className="flex items-start gap-3">
-        <div
-          className={[
-            "inline-flex h-10 w-10 items-center justify-center rounded-xl border",
-            "shadow-xs ring-1 ring-inset",
-            toneStyles.iconWrap,
-          ].join(" ")}
-        >
+        <div className={["inline-flex h-10 w-10 items-center justify-center rounded-xl border", "shadow-xs ring-1 ring-inset", toneStyles.iconWrap].join(" ")}>
           <Icon className={["h-5 w-5", toneStyles.icon].join(" ")} />
         </div>
         <div className="min-w-0">
@@ -223,35 +152,31 @@ function Card({
       </div>
       <div
         aria-hidden
-        className={[
-          "pointer-events-none absolute -bottom-24 left-1/2 h-48 w-48 -translate-x-1/2 rounded-full blur-2xl opacity-0",
-          "transition-opacity duration-300 group-hover:opacity-60",
-          toneStyles.glow,
-        ].join(" ")}
+        className={["pointer-events-none absolute -bottom-24 left-1/2 h-48 w-48 -translate-x-1/2 rounded-full blur-2xl opacity-0", "transition-opacity duration-300 group-hover:opacity-60", toneStyles.glow].join(" ")}
       />
     </div>
   );
 }
 
 const HealthStatus: React.FC<Props> = ({
-  suhu_ikan,
-  nilai_gas,
-  avg_rgb,
-  warna_ikan,
-  status_gas,
+  suhu_ikan = null,
+  nilai_gas = null,
+  avg_rgb = null,
+  warna_ikan = null,
+  status_gas = null,
   fishName = "Ikan Fufu",
   animate = true,
 }) => {
-  // Status dari LABEL (ditampilkan untuk warna & gas)
+  // Status dari LABEL
   const warnaStatus = useMemo(() => statusFromWarnaLabel(warna_ikan), [warna_ikan]);
-  const gasStatus = useMemo(() => statusFromGasLabel(status_gas), [status_gas]);
+  const gasStatus   = useMemo(() => statusFromGasLabel(status_gas), [status_gas]);
 
-  // Status dari NILAI (untuk skor)
-  const suhuStatus = useMemo(() => statusFromSuhu(suhu_ikan), [suhu_ikan]);
-  const gasNumStatus = useMemo(() => statusFromGasValue(nilai_gas), [nilai_gas]);
-  const rgbStatus = useMemo(() => statusFromAvgRGB(avg_rgb), [avg_rgb]);
+  // Status dari NILAI (tetap dihitung, tapi tidak ditampilkan angkanya)
+  const suhuStatus    = useMemo(() => statusFromSuhu(suhu_ikan), [suhu_ikan]);
+  const gasNumStatus  = useMemo(() => statusFromGasValue(nilai_gas), [nilai_gas]);
+  const rgbStatus     = useMemo(() => statusFromAvgRGB(avg_rgb), [avg_rgb]);
 
-  // Skor akhir (0–100)
+  // Skor akhir (0–100) untuk kesimpulan
   const healthScore = useMemo(() => {
     const s =
       scoreOfStatus(warnaStatus) * W.warnaLabel +
@@ -263,94 +188,73 @@ const HealthStatus: React.FC<Props> = ({
   }, [warnaStatus, gasStatus, suhuStatus, gasNumStatus, rgbStatus]);
 
   // Keputusan konsumsi
-  const isSafeToEat = healthScore >= 85;
-  const reheatOnly = healthScore >= 70 && healthScore < 85; // waspada
-  const notRecommended = healthScore >= 50 && healthScore < 70; // waspada
-  const isUnsafe = healthScore < 50; // bahaya
+  const isSafeToEat   = healthScore >= 85;
+  const reheatOnly    = healthScore >= 70 && healthScore < 85;
+  const notRecommended= healthScore >= 50 && healthScore < 70;
+  const isUnsafe      = healthScore < 50;
 
   const StatusIcon = isUnsafe ? XCircle : isSafeToEat ? CheckCircle : AlertCircle;
 
-  const getConsumptionMessage = () => {
-    if (isSafeToEat) return `${fishName} AMAN untuk dikonsumsi.`;
-    if (reheatOnly) return `${fishName} DAPAT dikonsumsi setelah dipanaskan hingga matang merata.`;
-    if (notRecommended) return `${fishName} TIDAK DIREKOMENDASIKAN untuk dikonsumsi.`;
-    return `${fishName} TIDAK LAYAK konsumsi.`;
-  };
+  const consumptionMessage =
+    isSafeToEat
+      ? `${fishName} AMAN untuk dikonsumsi.`
+      : reheatOnly
+      ? `${fishName} DAPAT dikonsumsi setelah dipanaskan hingga matang.`
+      : notRecommended
+      ? `${fishName} TIDAK DIREKOMENDASIKAN untuk dikonsumsi.`
+      : `${fishName} TIDAK LAYAK konsumsi.`;
 
-  const getActionTips = () => {
-    if (isSafeToEat) return "Simpan 0–4°C. Konsumsi 24–48 jam.";
-    if (reheatOnly) return "Panaskan hingga inti >70°C. Jika bau asam/menyengat, JANGAN konsumsi.";
-    if (notRecommended) return "Ada tanda penurunan mutu. Demi keamanan, sebaiknya jangan konsumsi.";
-    return "Tanda kerusakan kuat (bau tajam/lendir/warna ekstrem). Buang produk.";
-  };
+  const actionTips =
+    isSafeToEat
+      ? "Simpan 0–4°C. Konsumsi 24–48 jam."
+      : reheatOnly
+      ? "Panaskan hingga inti >70°C. Jika tercium menyengat/asam, jangan konsumsi."
+      : notRecommended
+      ? "Ada tanda penurunan mutu. Demi keamanan, sebaiknya jangan dikonsumsi."
+      : "Tanda kerusakan kuat (bau tajam/lendir/warna ekstrem). Buang produk.";
 
-  const getProgressColor = () => {
-    if (isSafeToEat) return "from-green-300 to-green-500";
-    if (reheatOnly || notRecommended) return "from-orange-300 to-orange-500";
-    return "from-red-600 to-red-800";
-  };
+  const progressColor =
+    isSafeToEat ? "from-green-300 to-green-500"
+    : (reheatOnly || notRecommended) ? "from-orange-300 to-orange-500"
+    : "from-red-600 to-red-800";
 
-  const verdictBadge = isUnsafe
-    ? "bg-red-50 text-red-800 border-red-300"
-    : notRecommended || reheatOnly
-    ? "bg-orange-50 text-orange-800 border-orange-300"
+  const verdictBadge =
+    isUnsafe ? "bg-red-50 text-red-800 border-red-300"
+    : (notRecommended || reheatOnly) ? "bg-orange-50 text-orange-800 border-orange-300"
     : "bg-green-50 text-green-800 border-green-300";
 
-  // ====== UI label ======
+  // Label status (tanpa angka)
   const suhuStatusLabel =
-    suhuStatus === "good"
-      ? "Dingin ideal"
-      : suhuStatus === "warning"
-      ? "Hangat (perlu hati-hati)"
-      : "Panas (tidak aman)";
-  const warnaStatusLabel = warna_ikan || "—"; // label dari spreadsheet
-  const gasStatusLabel = status_gas || "—"; // label dari spreadsheet
+    suhuStatus === "good" ? "Dingin ideal"
+    : suhuStatus === "warning" ? "Hangat (perlu hati-hati)"
+    : "Panas (tidak aman)";
+  const warnaStatusLabel = (warna_ikan ?? "").trim() || "—";
+  const gasStatusLabel   = (status_gas ?? "").trim() || "—";
 
   const cards = [
-    {
-      title: "Status Suhu",
-      label: suhuStatusLabel,
-      tone: toTone(suhuStatus),
-      icon: Thermometer,
-      hint: "Pembacaan suhu terkini dari sensor",
-    },
-    {
-      title: "Status Warna Fufu",
-      label: warnaStatusLabel,
-      tone: toTone(warnaStatus),
-      icon: Palette,
-      hint: "Deteksi warna bahan (ΔE/visual)",
-    },
-    {
-      title: "Status Gas",
-      label: gasStatusLabel,
-      tone: toTone(gasStatus),
-      icon: Flame,
-      hint: "Konsentrasi gas/volatil (ppm)",
-    },
+    { title: "Status Suhu",        label: suhuStatusLabel, tone: toTone(suhuStatus), icon: Thermometer, hint: "Pembacaan suhu terkini dari sensor" },
+    { title: "Status Warna Fufu",  label: warnaStatusLabel, tone: toTone(warnaStatus), icon: Palette,     hint: "Deteksi warna bahan (ΔE/visual)" },
+    { title: "Status Gas",         label: gasStatusLabel,   tone: toTone(gasStatus),   icon: Flame,       hint: "Konsentrasi gas/volatil" },
   ] as const;
 
   return (
     <motion.div
-      initial={animate ? { opacity: 0, y: 20 } : (false as any)}
+      initial={animate ? { opacity: 0, y: 20 } : false}
       animate={animate ? { opacity: 1, y: 0 } : undefined}
       className="relative bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-white/50 overflow-hidden"
     >
-      {/* Background full gradien biru muda → biru langit */}
+      {/* Background */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 -z-10"
-        style={{
-          background:
-            "linear-gradient(135deg, #E0F2FE 0%, #BAE6FD 35%, #7DD3FC 70%, #38BDF8 100%)",
-        }}
+        style={{ background: "linear-gradient(135deg, #E0F2FE 0%, #BAE6FD 35%, #7DD3FC 70%, #38BDF8 100%)" }}
       />
 
-      {/* Header skor & keputusan konsumsi */}
+      {/* Header skor & legend (tanpa angka sensor) */}
       <div className="flex items-center justify-between mb-3">
         <div>
           <h2 className="text-2xl font-bold text-gray-800">Kelayakan Konsumsi (Fufu)</h2>
-          <p className="text-sm text-slate-600">Pantau indikator utama secara real‑time.</p>
+          <p className="text-sm text-slate-600">Pantau indikator utama secara real-time.</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="hidden md:flex items-center gap-2 text-xs text-slate-600">
@@ -359,28 +263,22 @@ const HealthStatus: React.FC<Props> = ({
           <div className="h-8 w-px bg-slate-300/60 hidden md:block" />
           <div className="flex items-center gap-2">
             <StatusIcon
-              className={`w-5 h-5 ${
-                isUnsafe
-                  ? "text-red-700"
-                  : isSafeToEat
-                  ? "text-green-600"
-                  : reheatOnly || notRecommended
-                  ? "text-orange-600"
-                  : "text-red-600"
-              }`}
+              className={`w-5 h-5 ${isUnsafe ? "text-red-700" : isSafeToEat ? "text-green-600" : "text-orange-600"}`}
               aria-hidden
             />
+            {/* Boleh tetap tampilkan persentase kesehatan keseluruhan */}
             <span className="text-xl font-bold text-gray-900">{healthScore}%</span>
           </div>
         </div>
       </div>
 
+      {/* Progress bar (tetap, karena bukan angka sensor mentah) */}
       <div className="w-full bg-white/60 rounded-full h-3 overflow-hidden mb-5 shadow-inner">
         <motion.div
-          initial={animate ? { width: 0 } : (false as any)}
+          initial={animate ? { width: 0 } : false}
           animate={animate ? { width: `${healthScore}%` } : undefined}
           transition={{ duration: 1, ease: "easeOut" }}
-          className={`h-full bg-gradient-to-r ${getProgressColor()} rounded-full`}
+          className={`h-full bg-gradient-to-r ${progressColor} rounded-full`}
           role="progressbar"
           aria-valuemin={0}
           aria-valuemax={100}
@@ -390,15 +288,15 @@ const HealthStatus: React.FC<Props> = ({
 
       {/* VERDICT */}
       <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-lg border ${verdictBadge} mb-6`}>
-        <span className="text-sm font-semibold">{getConsumptionMessage()}</span>
+        <span className="text-sm font-semibold">{consumptionMessage}</span>
       </div>
 
-      {/* STATUS CARDS */}
+      {/* STATUS CARDS (tanpa angka sensor) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {cards.map((c, i) => (
           <motion.div
             key={c.title}
-            initial={animate ? { y: 8, opacity: 0 } : (false as any)}
+            initial={animate ? { y: 8, opacity: 0 } : false}
             animate={animate ? { y: 0, opacity: 1 } : undefined}
             transition={{ duration: 0.35, delay: i * 0.05 }}
           >
@@ -407,22 +305,22 @@ const HealthStatus: React.FC<Props> = ({
         ))}
       </div>
 
-      {/* Peringatan & saran tindakan */}
+      {/* Peringatan & saran */}
       <motion.div
-        initial={animate ? { opacity: 0 } : (false as any)}
+        initial={animate ? { opacity: 0 } : false}
         animate={animate ? { opacity: 1 } : undefined}
         transition={{ delay: 0.2 }}
         className={`mt-6 p-4 rounded-xl border-l-4 ${
           isUnsafe
             ? "bg-red-50/90 border-l-red-700 text-red-800"
-            : notRecommended || reheatOnly
+            : (notRecommended || reheatOnly)
             ? "bg-orange-50/90 border-l-orange-600 text-orange-800"
             : "bg-green-50/90 border-l-green-600 text-green-800"
         }`}
         aria-live="polite"
       >
-        <p className="font-semibold mb-1">{getConsumptionMessage()}</p>
-        <p className="text-sm opacity-90">{getActionTips()}</p>
+        <p className="font-semibold mb-1">{consumptionMessage}</p>
+        <p className="text-sm opacity-90">{actionTips}</p>
       </motion.div>
     </motion.div>
   );
