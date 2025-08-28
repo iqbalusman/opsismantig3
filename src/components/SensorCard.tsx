@@ -127,7 +127,7 @@ const SensorCard: React.FC<SensorCardProps> = ({ row, className }) => {
           title="Suhu Ikan"
           value={suhu}
           subtitle="Pemantauan suhu tubuh ikan untuk menjaga kesegaran"
-          footerRight={<Pill label="Kesegaran Terjamin" intent="good" />}
+          footerRight={<Pill label="suhu ikan" intent="good" />}
         />
 
         {/* AVG RGB */}

@@ -227,7 +227,7 @@ const HealthStatus: React.FC<Props> = ({
   const suhuStatusLabel =
     suhuStatus === "good" ? "Dingin ideal"
     : suhuStatus === "warning" ? "Hangat (perlu hati-hati)"
-    : "Panas (tidak aman)";
+    : "Suhu (tidak aman)";
   const warnaStatusLabel = (warna_ikan ?? "").trim() || "—";
   const gasStatusLabel   = (status_gas ?? "").trim() || "—";
 
