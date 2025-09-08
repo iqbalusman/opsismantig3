@@ -150,7 +150,7 @@ const Home: React.FC<HomeProps> = ({ onStartMonitoring }) => {
   <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
     {/* Kolom Teks */}
     <div>
-      <h2 className="text-3xl font-bold text-gray-900 mb-3">Teknologi IoT Terdepan</h2>
+      <h2 className="text-3xl font-bold text-gray-9000 mb-3">Teknologi IoT Terdepan</h2>
       <p className="text-gray-600 mb-6">
         Arsitektur ringan dan andal dari edge hingga dashboard untuk memastikan data sensor
         stabil, real-time, dan mudah diintegrasikan.
@@ -178,11 +178,6 @@ const Home: React.FC<HomeProps> = ({ onStartMonitoring }) => {
     <div className="relative">
       {/* dekorasi blur halus di belakang gambar */}
       <div className="absolute -inset-4 -z-10 rounded-[2rem] bg-gradient-to-br from-blue-100 to-cyan-100 blur-2xl opacity-70" />
-      <img
-        src="https://sdmntprwestus.oaiusercontent.com/files/00000000-2f3c-6230-bc42-bf22347b9d60/raw?se=2025-08-28T00%3A22%3A58Z&sp=r&sv=2024-08-04&sr=b&scid=76163110-411b-5bed-b116-8191344dbe10&skoid=03727f49-62d3-42ac-8350-1c0e6559d238&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2025-08-27T23%3A16%3A53Z&ske=2025-08-28T23%3A16%3A53Z&sks=b&skv=2024-08-04&sig=9to6ePZxCYvKQgUYaR693wo6kMR2Ty1TmPhogUBz%2B/A%3D"               // ganti sesuai nama file kamu di /public
-        alt="Ilustrasi arsitektur IoT: sensor → gateway → cloud → dashboard"
-        className="w-full rounded-2xl shadow-2xl border object-cover"
-      />
     </div>
   </div>
 </motion.section>
