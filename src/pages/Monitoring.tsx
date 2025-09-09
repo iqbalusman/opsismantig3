@@ -1,3 +1,4 @@
+// src/pages/Monitoring.tsx
 import React from "react";
 import { useGoogleSheet } from "../hooks/useGoogleSheet";
 import SensorCard from "../components/SensorCard";
@@ -6,31 +7,46 @@ import HealthStatus from "../components/HealthStatus";
 import { formatLocal } from "../lib/fetchSpreadsheetData";
 import { Download, HeartPulse, Activity, BarChart2, Info } from "lucide-react";
 
-const Monitoring: React.FC = () => {
-  // auto-update tiap 5 detik (ubah sesuai kebutuhan)
-  const { data, isInitialLoading, error, lastUpdatedStr } = useGoogleSheet({ intervalMs: 2000 });
+/* ===== Helpers untuk baca nilai dari row ===== */
+const toNum = (v: any): number | null => {
+  if (v === undefined || v === null || v === "") return null;
+  const n = Number(String(v).replace(",", ".")); // dukung "28,62"
+  return Number.isFinite(n) ? n : null;
+};
+// cari field dengan nama fleksibel (case-insensitive, hilangkan spasi/underscore)
+const pickField = (row: Record<string, any> | undefined, candidates: string[]) => {
+  if (!row) return null;
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const keys = Object.keys(row);
+  for (const c of candidates) {
+    const hit = keys.find((k) => norm(k) === norm(c));
+    if (hit && row[hit] !== undefined && row[hit] !== null && row[hit] !== "") return row[hit];
+  }
+  return null;
+};
 
+const Monitoring: React.FC = () => {
+  // auto-update tiap 2 detik
+  const { data, isInitialLoading, error, lastUpdatedStr } = useGoogleSheet({ intervalMs: 2000 });
   const latest = React.useMemo(() => (data.length ? data[data.length - 1] : undefined), [data]);
 
   // ===== Download CSV =====
   const handleDownloadCSV = React.useCallback(() => {
     try {
       if (!data || data.length === 0) return;
-
       const headers = ["timestamp", "suhu ikan", "warna ikan", "status gas", "nilai gas", "avg rgb"];
       const escapeCsv = (v: unknown) => {
         const s = v == null ? "" : String(v);
         return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-        };
+      };
       const rows = data.map((r) => [
-        formatLocal(r.timestamp as any),
+        formatLocal((r as any).timestamp as any),
         (r as any).suhu_ikan ?? "",
         (r as any).warna_ikan ?? "",
         (r as any).status_gas ?? "",
         (r as any).nilai_gas ?? "",
         (r as any).avg_rgb ?? "",
       ]);
-
       const csv = [headers.join(","), ...rows.map((row) => row.map(escapeCsv).join(","))].join("\n");
       const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
@@ -42,16 +58,34 @@ const Monitoring: React.FC = () => {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-    } catch {
-      // swallow: jangan bikin crash UI kalau gagal download
-    }
+    } catch {/* no-op */}
   }, [data]);
 
-  const overlay = isInitialLoading; // overlay hanya saat load pertama
+  const overlay = isInitialLoading;
+
+  // ==== Ambil nilai yang akan dipass ke HealthStatus ====
+  // Catatan: tambahkan alias lain kalau header sheet kamu berbeda
+  const avgVal = toNum(
+    pickField(latest as any, ["avg_rgb", "avg rgb", "avg", "AVG", "Average", "avgrgb", "avgRgb"])
+  );
+  const gasVal = toNum(
+    pickField(latest as any, ["nilai_gas", "nilai gas", "gas", "GAS", "gas_value", "gasValue"])
+  );
+  const tempVal = toNum(
+    pickField(latest as any, ["suhu_ikan", "suhu ikan", "suhu", "temperature", "TEMP", "body_temp", "body temp"])
+  );
+
+  // Debug: lihat nama-nama kolom yang ada
+  if (import.meta.env.DEV && latest) {
+    // eslint-disable-next-line no-console
+    console.log("[Monitoring] keys:", Object.keys(latest));
+    // eslint-disable-next-line no-console
+    console.log("[Monitoring] values (avg,g as,temp):", avgVal, gasVal, tempVal);
+  }
 
   return (
     <div className="relative min-h-[100dvh]">
-      {/* Background (NO blur) */}
+      {/* Background */}
       <div
         aria-hidden
         className="absolute inset-0 -z-10"
@@ -75,13 +109,8 @@ const Monitoring: React.FC = () => {
                 <p className="mt-1 text-sm text-slate-600 flex items-center gap-1.5">
                   <Info className="w-4 h-4 text-sky-600" />
                   {lastUpdatedStr ? (
-                    <>
-                      Terakhir diperbarui:{" "}
-                      <span className="font-semibold text-slate-900">{lastUpdatedStr}</span>
-                    </>
-                  ) : (
-                    "Memuat data…"
-                  )}
+                    <>Terakhir diperbarui: <span className="font-semibold text-slate-900">{lastUpdatedStr}</span></>
+                  ) : ("Memuat data…")}
                   <span className="ml-2 inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
                     <span className="relative flex h-2 w-2">
                       <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
@@ -134,10 +163,11 @@ const Monitoring: React.FC = () => {
             <div className="rounded-3xl border border-sky-100 bg-white shadow-sm p-4">
               {latest ? (
                 <HealthStatus
-                  suhu_ikan={(latest as any).suhu_ikan}
-                  nilai_gas={(latest as any).nilai_gas}
-                  warna_ikan={(latest as any).warna_ikan}
-                  status_gas={(latest as any).status_gas}
+                  avg_rgb={avgVal}
+                  nilai_gas={gasVal}
+                  suhu_ikan={tempVal}
+                  fishName="Ikan Fufu"
+                  animate
                 />
               ) : (
                 <div className="p-4 rounded-2xl border bg-white text-gray-600">Belum ada data.</div>
@@ -158,11 +188,7 @@ const Monitoring: React.FC = () => {
             </div>
 
             <div className="rounded-3xl border border-sky-100 bg-white shadow-sm p-4">
-              {latest ? (
-                <SensorCard row={latest as any} />
-              ) : (
-                <div className="p-4 rounded-2xl border bg-white text-gray-600">Belum ada data.</div>
-              )}
+              {latest ? <SensorCard row={latest as any} /> : <div className="p-4 rounded-2xl border bg-white text-gray-600">Belum ada data.</div>}
             </div>
           </section>
 
