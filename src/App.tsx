@@ -4,7 +4,7 @@ import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import Monitoring from './pages/Monitoring';
 import Contact from './pages/Contact';
-import Gallery from './pages/Gallery'; // <-- tambah import
+import Gallery from './pages/Gallery'; // <-- import Gallery
 import Footer from './components/Footer';
 
 type Page = 'home' | 'monitoring' | 'gallery' | 'contact'; // <-- tambah 'gallery'

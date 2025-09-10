@@ -1,15 +1,17 @@
 // src/components/HealthStatus.tsx
 // FINAL — 4 level + persentase halus & sensitif (AVG & GAS saja; suhu netral)
 //
-// Ambang status:
-//  AVG: 0–250 Segar, 250–400 Kurang, 400–450 Tidak Segar, >450 Tidak Layak
-//  GAS: 0–2500 Segar, 2500–3500 Kurang, 3500–4000 Tidak Segar, >4000 Tidak Layak
+// PERUBAHAN (AVG):
+//  • 500–730 = SEGAR dengan titik tengah 620.
+//    - ≤620  → "Segar — Lebih Cerah" (ideal untuk segera dihidangkan; tekstur lebih lembut)
+//    - >620  → "Segar — Lebih Gelap" (cocok untuk ekspor/retensi; tekstur lebih padat)
+//  • 400–500 → KURANG SEGAR
+//  • ≤400    → TIDAK SEGAR
+//  • 730–800 → KURANG SEGAR
+//  • ≥800    → TIDAK SEGAR
 //
-// Persentase:
-//  - Skor kontinu per metrik (piecewise-linear) 0..100
-//  - Digabung pakai soft-min (condong ke yang terburuk) dengan α=0.40
-//  - Ditampilkan 1 desimal
-// Suhu: NETRAL by default; hanya Dingin (≤4°C) / Panas (≥30°C)
+// CATATAN: GAS tetap mengikuti ambang sebelumnya. Skor persentase tetap soft-min antara AVG & GAS.
+// Suhu hanya monitoring (Netral kecuali Dingin ≤4°C, Panas ≥30°C).
 
 import React, { useMemo } from "react";
 import { motion } from "framer-motion";
@@ -27,16 +29,23 @@ type Props = {
 };
 
 /* --- Ambang --- */
-const AVG_GOOD_MAX = 250;
-const AVG_WARN_MAX = 400;
-const AVG_BAD_MAX  = 450;
-
+// GAS (tidak berubah)
 const GAS_GOOD_MAX = 2500;
 const GAS_WARN_MAX = 3500;
 const GAS_BAD_MAX  = 4000;
 
-const AVG_CAP_DANGER = 700;   // >700 → skor ~0
-const GAS_CAP_DANGER = 6000;  // >6000 → skor ~0
+// AVG (baru)
+const AVG_FRESH_MIN   = 500;  // segar mulai
+const AVG_FRESH_PIVOT = 620;  // titik tengah cerah/gelap
+const AVG_FRESH_MAX   = 730;  // segar berakhir
+const AVG_LOW_BAD_MAX = 400;  // ≤400 tidak segar
+const AVG_LOW_WARN_MAX = 500; // 400–500 kurang segar
+const AVG_HIGH_WARN_MIN = 730; // 730–800 kurang segar
+const AVG_HIGH_BAD_MIN  = 800; // ≥800 tidak segar
+
+// Batas "lenyap" skor untuk ekor ekstrem (semakin jauh → skor → 0)
+const AVG_CAP_DANGER = 1100;
+const GAS_CAP_DANGER = 6000;
 
 const SOFT_MIN_ALPHA = 0.40;  // sensitif & tetap konservatif
 const SCORE_DECIMALS = 1;     // tampil 1 desimal
@@ -50,14 +59,41 @@ const DEBUG = false;           // nyalakan agar terlihat di Console
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 
+// Skor AVG baru — puncak di sekitar 620 (lebih cerah → naik; lebih gelap → sedikit turun namun masih segar)
 function scoreFromAvg(avg?: number | null): number {
   if (!Number.isFinite(avg as number)) return 60;
   const x = avg as number;
-  if (x <= AVG_GOOD_MAX) { const t = clamp01(x / AVG_GOOD_MAX); return lerp(100, 88, t); }
-  if (x <= AVG_WARN_MAX) { const t = clamp01((x-AVG_GOOD_MAX)/(AVG_WARN_MAX-AVG_GOOD_MAX)); return lerp(88, 65, t); }
-  if (x <= AVG_BAD_MAX)  { const t = clamp01((x-AVG_WARN_MAX)/(AVG_BAD_MAX-AVG_WARN_MAX));   return lerp(65, 35, t); }
-  const t = clamp01((x-AVG_BAD_MAX)/(AVG_CAP_DANGER-AVG_BAD_MAX)); return lerp(35, 0, t);
+  if (x <= AVG_LOW_BAD_MAX) {
+    // 0..400 → 0..35
+    const t = clamp01(x / AVG_LOW_BAD_MAX);
+    return lerp(0, 35, t);
+  }
+  if (x < AVG_LOW_WARN_MAX) {
+    // 400..500 → 35..65
+    const t = clamp01((x - AVG_LOW_BAD_MAX) / (AVG_LOW_WARN_MAX - AVG_LOW_BAD_MAX));
+    return lerp(35, 65, t);
+  }
+  if (x <= AVG_FRESH_PIVOT) {
+    // 500..620 (Segar — Lebih Cerah) → 65..100
+    const t = clamp01((x - AVG_FRESH_MIN) / (AVG_FRESH_PIVOT - AVG_FRESH_MIN));
+    return lerp(65, 100, t);
+  }
+  if (x <= AVG_FRESH_MAX) {
+    // 620..730 (Segar — Lebih Gelap) → 100..88 (sedikit menurun tetapi tetap segar)
+    const t = clamp01((x - AVG_FRESH_PIVOT) / (AVG_FRESH_MAX - AVG_FRESH_PIVOT));
+    return lerp(100, 88, t);
+  }
+  if (x <= AVG_HIGH_BAD_MIN) {
+    // 730..800 (Kurang Segar) → 88..55
+    const t = clamp01((x - AVG_HIGH_WARN_MIN) / (AVG_HIGH_BAD_MIN - AVG_HIGH_WARN_MIN));
+    return lerp(88, 55, t);
+  }
+  // ≥800..1100 → 55..0
+  const capped = Math.min(x, AVG_CAP_DANGER);
+  const t = clamp01((capped - AVG_HIGH_BAD_MIN) / (AVG_CAP_DANGER - AVG_HIGH_BAD_MIN));
+  return lerp(55, 0, t);
 }
+
 function scoreFromGas(gas?: number | null): number {
   if (!Number.isFinite(gas as number)) return 60;
   const x = gas as number;
@@ -66,29 +102,99 @@ function scoreFromGas(gas?: number | null): number {
   if (x <= GAS_BAD_MAX)  { const t = clamp01((x-GAS_WARN_MAX)/(GAS_BAD_MAX-GAS_WARN_MAX));   return lerp(65, 35, t); }
   const t = clamp01((x-GAS_BAD_MAX)/(GAS_CAP_DANGER-GAS_BAD_MAX)); return lerp(35, 0, t);
 }
+
 function softMin(a: number, b: number, alpha = SOFT_MIN_ALPHA): number {
   const lo = Math.min(a, b), hi = Math.max(a, b);
   return lo + alpha * (hi - lo);
 }
 
-/* --- Klasifikasi 4 level --- */
-function classifyAvg(avg?: number | null): { label: Label4; tone: Tone; score: number } {
+/* --- Klasifikasi 4 level (AVG baru) --- */
+function classifyAvg(avg?: number | null): { label: Label4; tone: Tone; score: number; variant?: "cerah" | "gelap"; desc: string } {
   const score = scoreFromAvg(avg);
-  if (!Number.isFinite(avg as number)) return { label: "Kurang Segar", tone: "warn", score };
+  if (!Number.isFinite(avg as number)) return { label: "Kurang Segar", tone: "warn", score, desc: "Data AVG tidak tersedia. Gunakan indikator lain (GAS/sensori) dan simpan pada 0–4°C." };
   const x = avg as number;
-  if (x <= AVG_GOOD_MAX) return { label: "Segar",        tone: "ok",     score };
-  if (x <= AVG_WARN_MAX) return { label: "Kurang Segar", tone: "warn",   score };
-  if (x <= AVG_BAD_MAX)  return { label: "Tidak Segar",  tone: "danger", score };
-  return { label: "Tidak Layak", tone: "danger", score };
+
+  // Urutan cek dibuat agar 500–730 tetap SEGAR (prioritas terhadap overlap 720–730)
+  if (x <= AVG_LOW_BAD_MAX) {
+    return {
+      label: "Tidak Segar",
+      tone: "danger",
+      score,
+      desc: "Warna terlalu pucat/memudar (≤400). Indikasi degradasi tinggi: bau asam/amonia, lendir berlebih, tekstur rapuh. Sebaiknya tidak dikonsumsi; buang sesuai prosedur higienis.",
+    };
+  }
+  if (x < AVG_LOW_WARN_MAX) {
+    return {
+      label: "Kurang Segar",
+      tone: "warn",
+      score,
+      desc: "Zona 400–500: kilau menurun dan elastisitas daging mulai berkurang. Wajib dimasak matang (inti ≥70°C). Lebih cocok untuk olahan berbumbu kuat (kari, sambal, abon). Jika bau menyengat/asam → jangan dikonsumsi.",
+    };
+  }
+  if (x >= AVG_FRESH_MIN && x <= AVG_FRESH_MAX) {
+    if (x <= AVG_FRESH_PIVOT) {
+      return {
+        label: "Segar",
+        tone: "ok",
+        score,
+        variant: "cerah",
+        desc: "Segar — lebih cerah (500–620). Ideal untuk segera dihidangkan setelah dimasak sederhana (kukus/panggang/saus ringan). Tekstur lebih lembut dan juicy, rasa bersih, oksidasi rendah. Simpan 0–4°C dan konsumsi ≤24–48 jam.",
+      };
+    }
+    return {
+      label: "Segar",
+      tone: "ok",
+      score,
+      variant: "gelap",
+      desc: "Segar — lebih gelap (>620 hingga 730). Cocok untuk pengiriman jarak jauh/ekspor: pigmen relatif stabil, kadar air cenderung lebih rendah sehingga tekstur lebih padat. Tahan lebih lama di rantai dingin. Cocok untuk marinasi/asap/goreng garing; butuh waktu masak sedikit lebih lama agar empuk.",
+    };
+  }
+  if (x < AVG_HIGH_BAD_MIN) {
+    // 730..800 (kurang segar)
+    return {
+      label: "Kurang Segar",
+      tone: "warn",
+      score,
+      desc: "Zona 730–800: warna mulai terlalu gelap. Potensi oksidasi/aftertaste meningkat. Masih dapat diolah panas hingga matang sempurna; lebih cocok untuk pengasapan/pengeringan dibanding menu segar premium.",
+    };
+  }
+  // ≥800
+  return {
+    label: "Tidak Segar",
+    tone: "danger",
+    score,
+    desc: "≥800: terlalu gelap, indikasi oksidasi lanjut. Risiko off-flavour (pahit/metallic) dan penurunan kualitas tekstur. Tidak disarankan untuk konsumsi. Buang sesuai prosedur.",
+  };
 }
-function classifyGas(gas?: number | null): { label: Label4; tone: Tone; score: number } {
+
+function classifyGas(gas?: number | null): { label: Label4; tone: Tone; score: number; desc: string } {
   const score = scoreFromGas(gas);
-  if (!Number.isFinite(gas as number)) return { label: "Kurang Segar", tone: "warn", score };
+  if (!Number.isFinite(gas as number)) return { label: "Kurang Segar", tone: "warn", score, desc: "Data GAS tidak tersedia. Gunakan indikator lain (AVG/sensori) dan simpan pada 0–4°C." };
   const x = gas as number;
-  if (x <= GAS_GOOD_MAX) return { label: "Segar",        tone: "ok",     score };
-  if (x <= GAS_WARN_MAX) return { label: "Kurang Segar", tone: "warn",   score };
-  if (x <= GAS_BAD_MAX)  return { label: "Tidak Segar",  tone: "danger", score };
-  return { label: "Tidak Layak", tone: "danger", score };
+  if (x <= GAS_GOOD_MAX) return {
+    label: "Segar",
+    tone: "ok",
+    score,
+    desc: "Indikator gas volatil rendah (≤2500): aroma bersih/laut segar, oksidasi minimal. Aman untuk konsumsi setelah dimasak wajar; simpan 0–4°C dan gunakan FIFO.",
+  };
+  if (x <= GAS_WARN_MAX) return {
+    label: "Kurang Segar",
+    tone: "warn",
+    score,
+    desc: "2500–3500: gas meningkat. Masak hingga inti ≥70°C. Lebih cocok untuk olahan berbumbu/marinasi. Hindari konsumsi mentah/semimentah.",
+  };
+  if (x <= GAS_BAD_MAX) return {
+    label: "Tidak Segar",
+    tone: "danger",
+    score,
+    desc: "3500–4000: gas tinggi, potensi off-odor (asam/amonia). Tidak disarankan untuk dikonsumsi, terutama pada populasi rentan.",
+  };
+  return {
+    label: "Tidak Layak",
+    tone: "danger",
+    score,
+    desc: ">4000: indikator sangat tinggi. Risiko keamanan/kualitas signifikan. Buang sesuai prosedur higienis.",
+  };
 }
 
 /* --- Suhu (netral) --- */
@@ -152,6 +258,7 @@ function Card({ tone, title, label, Icon, hint, badgeText }:{
             <div className="text-lg font-semibold tracking-tight text-slate-800">{label}</div>
             <StatusBadge tone={tone} labelOverride={badgeText} />
           </div>
+          
         </div>
       </div>
       <div aria-hidden className={["pointer-events-none absolute -bottom-24 left-1/2 h-48 w-48 -translate-x-1/2 rounded-full blur-2xl opacity-0","transition-opacity duration-300 group-hover:opacity-60",t.glow].join(" ")} />
@@ -170,7 +277,7 @@ const HealthStatus: React.FC<Props> = ({ avg_rgb=null, nilai_gas=null, suhu_ikan
 
   if (DEBUG) {
     // eslint-disable-next-line no-console
-    console.log("[HealthStatus]", { avg_rgb, nilai_gas, scoreAvg: avgClass.score, scoreGas: gasClass.score, final: scorePrecise });
+    console.log("[HealthStatus]", { avg_rgb, nilai_gas, scoreAvg: avgClass.score, scoreGas: gasClass.score, final: scorePrecise, avgClass });
   }
 
   const sev: Record<Label4, number> = { "Segar":0, "Kurang Segar":1, "Tidak Segar":2, "Tidak Layak":3 };
@@ -200,11 +307,15 @@ const HealthStatus: React.FC<Props> = ({ avg_rgb=null, nilai_gas=null, suhu_ikan
     reheatOnly ? "bg-orange-50 text-orange-800 border-orange-300" :
     "bg-green-50 text-green-800 border-green-300";
 
+  // Label AVG dengan varian
+  const avgLabel = avgClass.variant ? `Segar — Lebih ${avgClass.variant === "cerah" ? "Cerah" : "Gelap"}` : avgClass.label;
+
   const cards = [
-    { title:"Status AVG", label: avgClass.label, tone: avgClass.tone as Tone, icon: Palette,
-      hint:"0–250 Segar · 250–400 Kurang · 400–450 Tidak Segar · >450 Tidak Layak", badgeText: avgClass.label },
+    { title:"Status AVG", label: avgLabel, tone: avgClass.tone as Tone, icon: Palette,
+      hint:"AVG: ≤400 Tidak Segar · 400–500 Kurang · 500–730 Segar (pivot 620) · 730–800 Kurang · ≥800 Tidak Segar",
+      badgeText: avgLabel },
     { title:"Status GAS", label: gasClass.label, tone: gasClass.tone as Tone, icon: Flame,
-      hint:"0–2500 Segar · 2500–3500 Kurang · 3500–4000 Tidak Segar · >4000 Tidak Layak", badgeText: gasClass.label },
+      hint:"GAS: 0–2500 Segar · 2500–3500 Kurang · 3500–4000 Tidak Segar · >4000 Tidak Layak", badgeText: gasClass.label },
     { title:"Suhu (monitoring)", label: suhuDisp.label, tone: suhuDisp.tone, icon: Thermometer,
       hint:"Tidak mempengaruhi persentase", badgeText: suhuDisp.label },
   ] as const;
@@ -251,6 +362,85 @@ const HealthStatus: React.FC<Props> = ({ avg_rgb=null, nilai_gas=null, suhu_ikan
           </motion.div>
         ))}
       </div>
+
+      {/* Penjelasan gabungan AVG & GAS */}
+      <motion.div initial={animate?{opacity:0}:false} animate={animate?{opacity:1}:undefined} transition={{ delay: 0.15 }}
+        className="mt-6 relative overflow-hidden rounded-2xl border bg-gradient-to-br from-sky-50 to-indigo-50 ring-1 ring-sky-100 p-5">
+        <div className="flex flex-wrap items-center gap-2 mb-3">
+          <span className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold bg-white/80 border-sky-200 text-sky-700">
+            <Palette className="h-3.5 w-3.5" /> AVG: {avgLabel}
+          </span>
+          <span className={["inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold border", getToneStyles(gasClass.tone).badge].join(" ")}>
+            <Flame className="h-3.5 w-3.5" /> GAS: {gasClass.label}
+          </span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* AVG Section */}
+          <div className="rounded-xl border bg-white/80 p-4 shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="inline-flex h-9 w-9 items-center justify-center rounded-lg border shadow-sm ring-1 ring-inset bg-sky-50 border-sky-200 ring-sky-200/50">
+                <Palette className="h-4.5 w-4.5 text-sky-700" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-semibold text-slate-800">AVG — Catatan</p>
+                <p className="text-sm mt-1 leading-relaxed text-slate-700">{avgClass.desc}</p>
+                {avgClass.label === "Segar" && (
+                  <ul className="list-disc pl-5 mt-2 text-sm text-slate-700 space-y-1">
+                    {avgClass.variant === "cerah" ? (
+                      <>
+                        <li>Rekomendasi: olah sederhana (kukus, tumis ringan, panggang) agar rasa asli menonjol.</li>
+                        <li>Distribusi: ideal untuk konsumsi lokal/harian; prioritaskan FIFO dan simpan 0–4°C.</li>
+                      </>
+                    ) : (
+                      <>
+                        <li>Rekomendasi: cocok untuk marinasi, asap, atau penggorengan karena tekstur lebih padat.</li>
+                        <li>Distribusi: sesuai untuk perjalanan jauh/ekspor dengan rantai dingin terjaga.</li>
+                      </>
+                    )}
+                  </ul>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* GAS Section */}
+          <div className="rounded-xl border bg-white/80 p-4 shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="inline-flex h-9 w-9 items-center justify-center rounded-lg border shadow-sm ring-1 ring-inset bg-orange-50 border-orange-200 ring-orange-200/50">
+                <Flame className="h-4.5 w-4.5 text-orange-700" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-semibold text-slate-800">GAS — Catatan</p>
+                <p className="text-sm mt-1 leading-relaxed text-slate-700">{gasClass.desc}</p>
+                <ul className="list-disc pl-5 mt-2 text-sm text-slate-700 space-y-1">
+                  {gasClass.label === "Segar" && (
+                    <>
+                      <li>Penyimpanan: 0–4°C, kemasan tertutup; gunakan FIFO.</li>
+                      <li>Olah: aman untuk teknik panas wajar (kukus/panggang/tumis).</li>
+                    </>
+                  )}
+                  {gasClass.label === "Kurang Segar" && (
+                    <>
+                      <li>Wajib panas sempurna: inti ≥70°C; hindari konsumsi mentah/semimentah.</li>
+                      <li>Menu disarankan: kari, balado, rendang, asap — menutup aftertaste.</li>
+                    </>
+                  )}
+                  {gasClass.label === "Tidak Segar" && (
+                    <>
+                      <li>Tidak disarankan untuk dikonsumsi. Periksa bau/warna/lendir; jika menyengat → buang.</li>
+                    </>
+                  )}
+                  {gasClass.label === "Tidak Layak" && (
+                    <>
+                      <li>Buang sesuai SOP higienis; hindari kontaminasi silang pada permukaan/alat.</li>
+                    </>
+                  )}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </motion.div>
 
       <motion.div initial={animate?{opacity:0}:false} animate={animate?{opacity:1}:undefined} transition={{ delay: 0.2 }}
         className={`mt-6 p-4 rounded-xl border-l-4 ${
