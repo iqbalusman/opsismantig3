@@ -7,13 +7,12 @@ import HealthStatus from "../components/HealthStatus";
 import { formatLocal } from "../lib/fetchSpreadsheetData";
 import { Download, HeartPulse, Activity, BarChart2, Info } from "lucide-react";
 
-/* ===== Helpers untuk baca nilai dari row ===== */
+/* ===== Helpers ===== */
 const toNum = (v: any): number | null => {
   if (v === undefined || v === null || v === "") return null;
-  const n = Number(String(v).replace(",", ".")); // dukung "28,62"
+  const n = Number(String(v).replace(",", ".")); 
   return Number.isFinite(n) ? n : null;
 };
-// cari field dengan nama fleksibel (case-insensitive, hilangkan spasi/underscore)
 const pickField = (row: Record<string, any> | undefined, candidates: string[]) => {
   if (!row) return null;
   const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -26,7 +25,6 @@ const pickField = (row: Record<string, any> | undefined, candidates: string[]) =
 };
 
 const Monitoring: React.FC = () => {
-  // auto-update tiap 2 detik
   const { data, isInitialLoading, error, lastUpdatedStr } = useGoogleSheet({ intervalMs: 2000 });
   const latest = React.useMemo(() => (data.length ? data[data.length - 1] : undefined), [data]);
 
@@ -34,7 +32,7 @@ const Monitoring: React.FC = () => {
   const handleDownloadCSV = React.useCallback(() => {
     try {
       if (!data || data.length === 0) return;
-      const headers = ["timestamp", "suhu ikan", "warna ikan", "status gas", "nilai gas", "avg rgb"];
+      const headers = ["timestamp", "suhu ikan", "nilai gas", "avg rgb", "status gas", "status (H)"];
       const escapeCsv = (v: unknown) => {
         const s = v == null ? "" : String(v);
         return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
@@ -42,10 +40,10 @@ const Monitoring: React.FC = () => {
       const rows = data.map((r) => [
         formatLocal((r as any).timestamp as any),
         (r as any).suhu_ikan ?? "",
-        (r as any).warna_ikan ?? "",
-        (r as any).status_gas ?? "",
         (r as any).nilai_gas ?? "",
         (r as any).avg_rgb ?? "",
+        (r as any).status_gas ?? "",
+        (r as any).status_h ?? "",
       ]);
       const csv = [headers.join(","), ...rows.map((row) => row.map(escapeCsv).join(","))].join("\n");
       const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -63,25 +61,10 @@ const Monitoring: React.FC = () => {
 
   const overlay = isInitialLoading;
 
-  // ==== Ambil nilai yang akan dipass ke HealthStatus ====
-  // Catatan: tambahkan alias lain kalau header sheet kamu berbeda
-  const avgVal = toNum(
-    pickField(latest as any, ["avg_rgb", "avg rgb", "avg", "AVG", "Average", "avgrgb", "avgRgb"])
-  );
-  const gasVal = toNum(
-    pickField(latest as any, ["nilai_gas", "nilai gas", "gas", "GAS", "gas_value", "gasValue"])
-  );
-  const tempVal = toNum(
-    pickField(latest as any, ["suhu_ikan", "suhu ikan", "suhu", "temperature", "TEMP", "body_temp", "body temp"])
-  );
-
-  // Debug: lihat nama-nama kolom yang ada
-  if (import.meta.env.DEV && latest) {
-    // eslint-disable-next-line no-console
-    console.log("[Monitoring] keys:", Object.keys(latest));
-    // eslint-disable-next-line no-console
-    console.log("[Monitoring] values (avg,g as,temp):", avgVal, gasVal, tempVal);
-  }
+  // ==== Nilai untuk HealthStatus ====
+  const avgVal = toNum(pickField(latest as any, ["avg_rgb", "avg rgb", "F (AVG RGB)", "f"]));
+  const gasVal = toNum(pickField(latest as any, ["nilai_gas", "nilai gas", "E (Nilai Gas)", "e"]));
+  const tempVal = toNum(pickField(latest as any, ["suhu_ikan", "suhu ikan", "temperature"]));
 
   return (
     <div className="relative min-h-[100dvh]">

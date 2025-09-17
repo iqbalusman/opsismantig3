@@ -133,17 +133,14 @@ const CustomTooltip: React.FC<{
   );
 };
 
-// ===== Memo compare: re-render hanya jika ada baris baru =====
+// ===== Memo compare =====
 const areEqual = (prev: SensorChartProps, next: SensorChartProps) => {
   const p = prev.data ?? [];
   const n = next.data ?? [];
-  const pLen = p.length;
-  const nLen = n.length;
-  const pLast = pLen ? (p[pLen - 1] as any)?.timestamp : null;
-  const nLast = nLen ? (n[nLen - 1] as any)?.timestamp : null;
-
+  const pLast = p.length ? (p[p.length - 1] as any)?.timestamp : null;
+  const nLast = n.length ? (n[n.length - 1] as any)?.timestamp : null;
   return (
-    pLen === nLen &&
+    p.length === n.length &&
     pLast === nLast &&
     prev.height === next.height &&
     prev.timeZone === next.timeZone &&
@@ -158,66 +155,26 @@ const SensorChartBase: React.FC<SensorChartProps> = ({
   className,
 }) => {
   const safe = Array.isArray(data) ? data : [];
-
-  // versi data: length + timestamp terakhir (hindari proses ulang tanpa data baru)
-  const dataVersion = useMemo(() => {
-    const len = safe.length;
-    const lastTs = len ? (safe[len - 1] as any)?.timestamp ?? "" : "";
-    return `${len}|${lastTs}`;
-  }, [safe]);
-
   const formatX = useMemo(() => tickTimeFormatter(timeZone), [timeZone]);
-
-  const latest = useMemo(
-    () => (safe.length ? (safe[safe.length - 1] as any) : undefined),
-    [dataVersion, safe]
-  );
+  const latest = useMemo(() => (safe.length ? safe[safe.length - 1] : undefined), [safe]);
 
   return (
     <CardShell title="Grafik Sensor" className={className}>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Suhu */}
-        <Panel
-          title="Grafik Suhu Ikan (°C)"
-          height={height}
-          icon={<Thermometer className="w-4 h-4" />}
-          gradient="from-blue-500 to-cyan-500"
-        >
+        {/* Suhu Ikan */}
+        <Panel title="Grafik Suhu Ikan (°C)" height={height} icon={<Thermometer className="w-4 h-4" />} gradient="from-blue-500 to-cyan-500">
           {safe.length === 0 ? (
             <div className="h-full grid place-items-center text-sm text-slate-600">Belum ada data.</div>
           ) : (
             <ResponsiveContainer>
               <LineChart data={safe} margin={{ top: 8, right: 24, left: 12, bottom: 8 }}>
-                <defs>
-                  <linearGradient id="gradSuhu" x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0%" stopColor="#60a5fa" />
-                    <stop offset="100%" stopColor="#06b6d4" />
-                  </linearGradient>
-                </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="timestamp" tickFormatter={formatX} minTickGap={24} stroke="#64748b" fontSize={12} />
-                <YAxis domain={["auto", "auto"]} stroke="#64748b" fontSize={12} />
+                <XAxis dataKey="timestamp" tickFormatter={formatX} stroke="#64748b" fontSize={12} />
+                <YAxis stroke="#64748b" fontSize={12} />
                 <Tooltip content={<CustomTooltip timeFormatter={formatX} />} />
-                <Line
-                  type="monotone"
-                  dataKey="suhu_ikan"
-                  name="Suhu"
-                  stroke="url(#gradSuhu)"
-                  strokeWidth={3}
-                  dot={false}
-                  activeDot={{ r: 5 }}
-                  connectNulls
-                  isAnimationActive={false}
-                />
-                {latest?.suhu_ikan != null && latest?.timestamp != null && (
-                  <ReferenceDot
-                    x={latest.timestamp as any}
-                    y={latest.suhu_ikan as any}
-                    r={4}
-                    fill="#06b6d4"
-                    stroke="#fff"
-                    strokeWidth={2}
-                  />
+                <Line type="monotone" dataKey="suhu_ikan" name="Suhu Ikan" stroke="#06b6d4" strokeWidth={3} dot={false} />
+                {latest?.suhu_ikan != null && latest?.timestamp && (
+                  <ReferenceDot x={latest.timestamp} y={latest.suhu_ikan} r={4} fill="#06b6d4" stroke="#fff" strokeWidth={2} />
                 )}
               </LineChart>
             </ResponsiveContainer>
@@ -225,47 +182,19 @@ const SensorChartBase: React.FC<SensorChartProps> = ({
         </Panel>
 
         {/* AVG RGB */}
-        <Panel
-          title="Grafik Analisis Warna (AVG RGB)"
-          height={height}
-          icon={<Palette className="w-4 h-4" />}
-          gradient="from-indigo-500 to-sky-500"
-        >
+        <Panel title="Grafik Analisis Warna (AVG RGB)" height={height} icon={<Palette className="w-4 h-4" />} gradient="from-indigo-500 to-sky-500">
           {safe.length === 0 ? (
             <div className="h-full grid place-items-center text-sm text-slate-600">Belum ada data.</div>
           ) : (
             <ResponsiveContainer>
               <LineChart data={safe} margin={{ top: 8, right: 24, left: 12, bottom: 8 }}>
-                <defs>
-                  <linearGradient id="gradRgb" x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0%" stopColor="#6366f1" />
-                    <stop offset="100%" stopColor="#0ea5e9" />
-                  </linearGradient>
-                </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="timestamp" tickFormatter={formatX} minTickGap={24} stroke="#64748b" fontSize={12} />
-                <YAxis domain={["auto", "auto"]} stroke="#64748b" fontSize={12} />
+                <XAxis dataKey="timestamp" tickFormatter={formatX} stroke="#64748b" fontSize={12} />
+                <YAxis stroke="#64748b" fontSize={12} />
                 <Tooltip content={<CustomTooltip timeFormatter={formatX} />} />
-                <Line
-                  type="monotone"
-                  dataKey="avg_rgb"
-                  name="AVG RGB"
-                  stroke="url(#gradRgb)"
-                  strokeWidth={3}
-                  dot={false}
-                  activeDot={{ r: 5 }}
-                  connectNulls
-                  isAnimationActive={false}
-                />
-                {latest?.avg_rgb != null && latest?.timestamp != null && (
-                  <ReferenceDot
-                    x={latest.timestamp as any}
-                    y={latest.avg_rgb as any}
-                    r={4}
-                    fill="#0ea5e9"
-                    stroke="#fff"
-                    strokeWidth={2}
-                  />
+                <Line type="monotone" dataKey="avg_rgb" name="AVG RGB" stroke="#0ea5e9" strokeWidth={3} dot={false} />
+                {latest?.avg_rgb != null && latest?.timestamp && (
+                  <ReferenceDot x={latest.timestamp} y={latest.avg_rgb} r={4} fill="#0ea5e9" stroke="#fff" strokeWidth={2} />
                 )}
               </LineChart>
             </ResponsiveContainer>
@@ -273,47 +202,19 @@ const SensorChartBase: React.FC<SensorChartProps> = ({
         </Panel>
 
         {/* Nilai Gas */}
-        <Panel
-          title="Grafik Nilai Gas"
-          height={height}
-          icon={<Wind className="w-4 h-4" />}
-          gradient="from-cyan-500 to-blue-700"
-        >
+        <Panel title="Grafik Nilai Gas (E)" height={height} icon={<Wind className="w-4 h-4" />} gradient="from-cyan-500 to-blue-700">
           {safe.length === 0 ? (
             <div className="h-full grid place-items-center text-sm text-slate-600">Belum ada data.</div>
           ) : (
             <ResponsiveContainer>
               <LineChart data={safe} margin={{ top: 8, right: 24, left: 12, bottom: 8 }}>
-                <defs>
-                  <linearGradient id="gradGas" x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0%" stopColor="#22d3ee" />
-                    <stop offset="100%" stopColor="#1d4ed8" />
-                  </linearGradient>
-                </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="timestamp" tickFormatter={formatX} minTickGap={24} stroke="#64748b" fontSize={12} />
-                <YAxis domain={["auto", "auto"]} stroke="#64748b" fontSize={12} />
+                <XAxis dataKey="timestamp" tickFormatter={formatX} stroke="#64748b" fontSize={12} />
+                <YAxis stroke="#64748b" fontSize={12} />
                 <Tooltip content={<CustomTooltip timeFormatter={formatX} />} />
-                <Line
-                  type="monotone"
-                  dataKey="nilai_gas"
-                  name="Nilai Gas"
-                  stroke="url(#gradGas)"
-                  strokeWidth={3}
-                  dot={false}
-                  activeDot={{ r: 5 }}
-                  connectNulls
-                  isAnimationActive={false}
-                />
-                {latest?.nilai_gas != null && latest?.timestamp != null && (
-                  <ReferenceDot
-                    x={latest.timestamp as any}
-                    y={latest.nilai_gas as any}
-                    r={4}
-                    fill="#1d4ed8"
-                    stroke="#fff"
-                    strokeWidth={2}
-                  />
+                <Line type="monotone" dataKey="nilai_gas" name="Nilai Gas" stroke="#1d4ed8" strokeWidth={3} dot={false} />
+                {latest?.nilai_gas != null && latest?.timestamp && (
+                  <ReferenceDot x={latest.timestamp} y={latest.nilai_gas} r={4} fill="#1d4ed8" stroke="#fff" strokeWidth={2} />
                 )}
               </LineChart>
             </ResponsiveContainer>

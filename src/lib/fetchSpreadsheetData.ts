@@ -35,7 +35,6 @@ function parseTs(x: unknown) {
   return Number.isNaN(d.getTime()) ? "" : d.toISOString();
 }
 
-// normalisasi string status/label
 function cleanStr(x: unknown) {
   const s = String(x ?? "").trim();
   if (!s) return "";
@@ -47,21 +46,23 @@ function cleanStr(x: unknown) {
 // mapping header sheet → properti snake_case
 const HEADER_ALIASES: Record<string, keyof SheetRow | "ignore"> = {
   "timestamp": "timestamp",
+
   "suhu ikan": "suhu_ikan",
   "suhu_ikan": "suhu_ikan",
 
-  "warna ikan": "warna_ikan",
-  "warna_ikan": "warna_ikan",
-  // alias kompatibilitas: sheet lama pakai "status ikan"
-  "status ikan": "warna_ikan",
-  "status_ikan": "warna_ikan",
+  "e (nilai gas)": "nilai_gas",
+  "nilai gas": "nilai_gas",
+  "nilai_gas": "nilai_gas",
+
+  "f (avg rgb)": "avg_rgb",
+  "avg rgb": "avg_rgb",
+  "avg_rgb": "avg_rgb",
 
   "status gas": "status_gas",
   "status_gas": "status_gas",
-  "nilai gas": "nilai_gas",
-  "nilai_gas": "nilai_gas",
-  "avg rgb": "avg_rgb",
-  "avg_rgb": "avg_rgb",
+
+  "status (h)": "status_h",
+  "status_h": "status_h",
 };
 
 function normRowKeys(o: Record<string, any>): Partial<SheetRow> {
@@ -78,23 +79,15 @@ function norm(rowRaw: Record<string, any>): SheetRow | null {
 
   const timestamp = parseTs(r.timestamp);
   const suhu_ikan = toNum(r.suhu_ikan);
-
-  // --- ambil warna_ikan ; jika kosong, fallback ke 'status ikan' ---
-  let warna_ikan = cleanStr(r.warna_ikan);
-  if (!warna_ikan) {
-    const fallback =
-      rowRaw["status ikan"] ?? rowRaw["status_ikan"] ?? rowRaw["STATUS IKAN"];
-    warna_ikan = cleanStr(fallback);
-  }
-
-  const status_gas = cleanStr(r.status_gas);
-  const nilai_gas  = toNum(r.nilai_gas);
+  const nilai_gas = toNum(r.nilai_gas);
   const avg_rgbRaw = r.avg_rgb == null ? undefined : toNum(r.avg_rgb);
-  const avg_rgb    = avg_rgbRaw != null && !Number.isNaN(avg_rgbRaw) ? avg_rgbRaw : undefined;
+  const avg_rgb = avg_rgbRaw != null && !Number.isNaN(avg_rgbRaw) ? avg_rgbRaw : undefined;
+  const status_gas = cleanStr(r.status_gas);
+  const status_h = cleanStr(r.status_h);
 
   if (!timestamp || Number.isNaN(suhu_ikan) || Number.isNaN(nilai_gas)) return null;
 
-  return { timestamp, suhu_ikan, warna_ikan, status_gas, nilai_gas, ...(avg_rgb !== undefined ? { avg_rgb } : {}) };
+  return { timestamp, suhu_ikan, nilai_gas, avg_rgb, status_gas, status_h };
 }
 
 async function getText(url: string) {
@@ -151,7 +144,11 @@ export async function fetchSpreadsheetData(): Promise<SheetRow[]> {
 
 // ---------- POST ----------
 export async function appendToSpreadsheet(payload: {
-  suhu_ikan: number; warna_ikan: string; status_gas: string; nilai_gas: number; avg_rgb?: number;
+  suhu_ikan: number;
+  nilai_gas: number;
+  avg_rgb?: number;
+  status_gas: string;
+  status_h: string;
 }) {
   if (!BASE_URL) throw new Error("VITE_SHEET_URL belum di-set di .env");
   const body = TOKEN ? { ...payload, token: TOKEN } : payload;
@@ -165,9 +162,7 @@ export async function appendToSpreadsheet(payload: {
     const msg = (json && (json.error || json.message)) || `POST gagal (HTTP ${res.status})`;
     throw new Error(msg);
   }
-  return json.written as {
-    timestamp: string; suhu_ikan: number; warna_ikan: string; status_gas: string; nilai_gas: number; avg_rgb?: number;
-  };
+  return json.written as SheetRow;
 }
 
 export function formatLocal(dtIso: string) {
